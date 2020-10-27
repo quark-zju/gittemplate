@@ -1,0 +1,177 @@
+use crate::ast;
+use crate::ast::Expr;
+use crate::ast::unquote;
+
+grammar;
+
+pub Expr = Expr200;
+
+Expr200: Expr = {
+    Expr150 => <>,
+    <name:Symbol> "=>" <body:Expr150> => {
+        // x => body: desugar to lambda(x, body)
+        Expr::Fn("lambda".into(), vec![Expr::Symbol(name), body])
+    },
+}
+
+Expr150: Expr = {
+    <x:Expr115> <xs:(".." Expr115)*> => {
+        if xs.is_empty() {
+            x
+        } else {
+            // x .. y .. z: desugar to concat(x, y, z)
+            let args: Vec<Expr> = std::iter::once(x).chain(xs.into_iter().map(|(_, e)| e)).collect();
+            Expr::Fn("concat".into(), args)
+        }
+    },
+}
+
+Expr115: Expr = {
+    <x:Expr110> <xs:("||" Expr110)*> => {
+        if xs.is_empty() {
+            x
+        } else {
+            // x || y || z: desugar to or(x, y, z)
+            let args: Vec<Expr> = std::iter::once(x).chain(xs.into_iter().map(|(_, e)| e)).collect();
+            Expr::Fn("or".into(), args)
+        }
+    },
+}
+
+Expr110: Expr = {
+    <x:Expr105> <xs:("&&" Expr105)*> => {
+        if xs.is_empty() {
+            x
+        } else {
+            // x && y && z: desugar to and(x, y, z)
+            let args: Vec<Expr> = std::iter::once(x).chain(xs.into_iter().map(|(_, e)| e)).collect();
+            Expr::Fn("and".into(), args)
+        }
+    },
+}
+
+Expr105: Expr = {
+    Expr100 => <>,
+    <x:Expr100> "==" <y:Expr100> => {
+        // x == y: desugar to eq(x, y)
+        ast!(eq({x}, {y}))
+    },
+    <x:Expr100> "!=" <y:Expr100> => {
+        // x != y: desugar to not(eq(x, y))
+        ast!(not(eq({x}, {y})))
+    },
+}
+
+Expr100: Expr = {
+    Expr060 => <>,
+    <x:Expr060> "in" <y:Expr060> => {
+        // x in y: desugar to contains(y, x)
+        ast!(contains({y}, {x}))
+    },
+    <x:Expr060> "not" "in" <y:Expr060> => {
+        // x not in y: desugar to not(contains(y, x))
+        ast!(not(contains({y}, {x})))
+    },
+}
+
+Expr060: Expr = {
+    Expr050 => <>,
+    <x:Expr050> "<" <y:Expr050> => {
+        // x < y: desugar to lt(x, y)
+        ast!(lt({x}, {y}))
+    },
+}
+
+Expr050: Expr = {
+    <x:Expr040> <xs:(r"(\+|-)" Expr040)*> => {
+        if xs.is_empty() {
+            x
+        } else {
+            // x + y - z: desugar to add(x, y, neg(z))
+            let args: Vec<Expr> = std::iter::once(x).chain(
+                xs.into_iter().map(|(sig, e)| {
+                    if sig == "+" {
+                        e
+                    } else {
+                        Expr::Fn("neg".into(), vec![e])
+                    }
+                })
+            ).collect();
+            Expr::Fn("add".into(), args)
+        }
+    },
+}
+
+Expr040: Expr = {
+    Expr010 => <>,
+    <x:Expr040> "*" <y:Expr010> => {
+        ast!(mul({x}, {y}))
+    }
+}
+
+Expr010: Expr = {
+    Expr000 => <>,
+    "!" <x:Expr010> => {
+        // !x: desugar to not(x)
+        ast!(not({x}))
+    },
+}
+
+Expr000: Expr = {
+    Symbol => Expr::Symbol(<>),
+    Regex => <>,
+    Literal => <>,
+    <func_name:Symbol> "(" <args:(Expr200 ",")*> <last:Expr200?> ")" => {
+        // Function call.
+        let mut arg_list: Vec<Expr> = args.into_iter().map(|(e, _)| e).collect();
+        if let Some(last_arg) = last { arg_list.push(last_arg); }
+        Expr::Fn(func_name.into(), arg_list)
+    },
+    <this:Expr000> "." <method_name:Symbol> "(" <args:(Expr200 ",")*> <last:Expr200?> ")" => {
+        // x.foo(a, b, c): desugar to foo(x, a, b, c)
+        let mut arg_list: Vec<Expr> = Vec::with_capacity(args.len() + 2);
+        arg_list.push(this);
+        for (arg, _) in args {
+            arg_list.push(arg);
+        }
+        if let Some(last_arg) = last { arg_list.push(last_arg); }
+        Expr::Fn(method_name.into(), arg_list)
+    },
+    <arg:Expr000> "." <attr_name:Symbol> => {
+        // x.foo: desugar to foo(x)
+        Expr::Fn(attr_name.into(), vec![arg])
+    },
+    <x:Expr000> "?" => {
+        // x?: desugar to try(x)
+        ast!(try({x}))
+    },
+    "[" <items:(Expr200 ",")*> <last:Expr200?> "]" => {
+        // [x, y, z]: desugar to vec(x, y, z)
+        let mut item_list: Vec<Expr> = items.into_iter().map(|(e, _)| e).collect();
+        if let Some(last_item) = last { item_list.push(last_item); }
+        Expr::Fn("vec".into(), item_list)
+    },
+    "(" <x:Expr200> ")" => x,
+}
+
+Regex: Expr = {
+    <s:r"/([^/]|\x5c.)*/"> => {
+        // /foo/: desugar to re("foo")
+        ast!(re({unquote(s)}))
+    }
+}
+
+Symbol: String = {
+    r"[a-zA-Z0-9_$@]+" => <>.to_string(),
+}
+
+Literal: Expr = {
+    <s:r"\x22([^\x22\x5c]|\x5c.)*\x22"> => {
+        // "foo"
+        Expr::Literal(unquote(s))
+    },
+    <s:r"\x27([^\x27\x5c]|\x5c.)*\x27"> => {
+        // 'foo'
+        Expr::Literal(unquote(s))
+    },
+}
