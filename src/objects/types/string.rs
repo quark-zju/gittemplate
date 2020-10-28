@@ -173,6 +173,10 @@ impl_object! {
         pub fn bold(&self) -> String {
             Style::default().bold().paint(&self.0).to_string()
         }
+
+        fn to_ast_fmt_string(&self) -> String {
+            format!("{:?}", self.as_ref())
+        }
     }
 }
 

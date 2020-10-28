@@ -76,6 +76,15 @@ pub trait ObjectProtocol: fmt::Fmt {
         self.fmt(&mut f)?;
         Ok(s)
     }
+
+    /// When used in `Expr::Inlined`. How to format the value.
+    fn to_ast_fmt_string(&self) -> String {
+        format!(
+            "{{{0}}}",
+            self.to_plain_string()
+                .unwrap_or_else(|e| format!("<inlined:{}>", e))
+        )
+    }
 }
 
 impl ObjectProtocol for Object {
@@ -117,6 +126,10 @@ impl ObjectProtocol for Object {
 
     fn to_serde_value(&self) -> Result<super::SerdeValue> {
         self.0.deref().to_serde_value()
+    }
+
+    fn to_ast_fmt_string(&self) -> String {
+        self.0.deref().to_ast_fmt_string()
     }
 }
 

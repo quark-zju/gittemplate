@@ -47,6 +47,13 @@ macro_rules! _impl_object_state {
         $crate::_impl_object_state!(input [$($_input_rest)*] state [(attr_names [$($_attr_names_rest)*]) (impl_body [$($_impl_body_rest)*]) (impl_deref_object [$($_impl_deref_object_rest)*]) (impl_meta [$($_impl_meta_rest)*]) (impl_object_protocol [$($_impl_object_protocol_rest)* fn to_serde_value $fn_args -> $fn_res { $($fn_body)* }]) (name [$($_name_rest)*])]);
     };
 
+    // Special case: to_ast_fmt_string (ObjectProtocol).
+    // - pattern: fn to_ast_fmt_string $fn_args:tt -> $fn_res:ty { $($fn_body:tt)* } ...
+    // - state: impl_object_protocol += fn to_ast_fmt_string $fn_args -> $fn_res { $($fn_body)* }
+    (input [fn to_ast_fmt_string $fn_args:tt -> $fn_res:ty { $($fn_body:tt)* } $($_input_rest:tt)*] state [(attr_names [$($_attr_names_rest:tt)*]) (impl_body [$($_impl_body_rest:tt)*]) (impl_deref_object [$($_impl_deref_object_rest:tt)*]) (impl_meta [$($_impl_meta_rest:tt)*]) (impl_object_protocol [$($_impl_object_protocol_rest:tt)*]) (name [$($_name_rest:tt)*])]) => {
+        $crate::_impl_object_state!(input [$($_input_rest)*] state [(attr_names [$($_attr_names_rest)*]) (impl_body [$($_impl_body_rest)*]) (impl_deref_object [$($_impl_deref_object_rest)*]) (impl_meta [$($_impl_meta_rest)*]) (impl_object_protocol [$($_impl_object_protocol_rest)* fn to_ast_fmt_string $fn_args -> $fn_res { $($fn_body)* }]) (name [$($_name_rest)*])]);
+    };
+
     // Special case: r#if function (raw ident).
     // - pattern: $(#[$fn_meta:meta])* $fn_vis:vis fn r#if $fn_args:tt -> $fn_res:ty { $($fn_body:tt)* } ...
     // - state: impl_body += $(#[$fn_meta])* $fn_vis fn r#if $fn_args -> $fn_res { $($fn_body)* }

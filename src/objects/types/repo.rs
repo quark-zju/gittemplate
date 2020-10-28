@@ -1,3 +1,4 @@
+use super::protocol::FromObjectRef;
 use super::protocol::IntoObject;
 use super::protocol::Object;
 use super::protocol::ObjectProtocol;
@@ -110,12 +111,15 @@ impl_object! {
 
         pub fn revs(&self, revset: Expr) -> Result<RevsetObject> {
             let repo = self.gitrevset_repo()?;
-            let set = if let Expr::Literal(s) = revset {
-                repo.anyrevs(s.as_ref())?
-            } else {
+            let set = loop {
+                if let Expr::Inlined(s) = &revset {
+                    if let Ok(s) = StringObject::from_object(s) {
+                        break repo.anyrevs(s.as_ref())?;
+                    }
+                }
                 // Try to convert AST to revset AST.
                 let expr = revset.into_gitrevset_expr()?;
-                repo.anyrevs(expr)?
+                break repo.anyrevs(expr)?;
             };
             Ok(RevsetObject::new(self.repo_ref.clone(), set))
         }

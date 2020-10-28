@@ -1,8 +1,9 @@
 // auto-generated: "lalrpop 0.19.1"
-// sha256: d232296d388c60a7d0762c4a6197d5869ccdf02a4d97376be95dc9f9ceb7cbe1
+// sha256: 41dde6ee5be785c8ec0dae850c7849fee9ebb030a4f34d80aa8aa4593
 use crate::ast;
 use crate::ast::Expr;
 use crate::ast::unquote;
+use crate::objects::protocol::IntoObject;
 #[allow(unused_extern_crates)]
 extern crate lalrpop_util as __lalrpop_util;
 #[allow(unused_imports)]
@@ -15,6 +16,7 @@ mod __parse__TopExpr {
     use crate::ast;
     use crate::ast::Expr;
     use crate::ast::unquote;
+    use crate::objects::protocol::IntoObject;
     #[allow(unused_extern_crates)]
     extern crate lalrpop_util as __lalrpop_util;
     #[allow(unused_imports)]
@@ -3003,6 +3005,7 @@ mod __intern_token {
     use crate::ast;
     use crate::ast::Expr;
     use crate::ast::unquote;
+    use crate::objects::protocol::IntoObject;
     #[allow(unused_extern_crates)]
     extern crate lalrpop_util as __lalrpop_util;
     #[allow(unused_imports)]
@@ -3581,7 +3584,7 @@ fn __action33<
 {
     {
         // "foo"
-        Expr::Literal(unquote(s))
+        Expr::Inlined(unquote(s).into_object())
     }
 }
 
@@ -3596,7 +3599,7 @@ fn __action34<
 {
     {
         // 'foo'
-        Expr::Literal(unquote(s))
+        Expr::Inlined(unquote(s).into_object())
     }
 }
 

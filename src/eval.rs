@@ -84,7 +84,6 @@ impl EvalContext {
     pub(crate) fn eval_expr(&self, expr: &Expr) -> Result<Object> {
         let object = &self.global_object;
         let value: Object = match expr {
-            Expr::Literal(s) => s.clone().into_object(),
             Expr::Symbol(Symbol::Name(name)) => match object.get_attr(&name)? {
                 Attribute::Missing => match self.resolve_global_symbol(name) {
                     Some(value) => value,
@@ -139,7 +138,6 @@ impl EvalContext {
     /// repetitive computation like constructing regex over and over.
     pub fn partial_eval(&self, mut expr: Expr) -> Expr {
         match expr {
-            Expr::Literal(s) => return Expr::Inlined(s.into_object()),
             Expr::Inlined(_) => {}
             Expr::Symbol(ref s) => {
                 if let Some(obj) = self.resolve_global_symbol(s.as_str()) {

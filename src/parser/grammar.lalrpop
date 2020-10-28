@@ -1,6 +1,7 @@
 use crate::ast;
 use crate::ast::Expr;
 use crate::ast::unquote;
+use crate::objects::protocol::IntoObject;
 
 grammar(ignore_errors: bool);
 
@@ -179,10 +180,10 @@ SymbolName: ast::Symbol = {
 Literal: Expr = {
     <s:r"\x22([^\x22\x5c]|\x5c.)*\x22"> => {
         // "foo"
-        Expr::Literal(unquote(s))
+        Expr::Inlined(unquote(s).into_object())
     },
     <s:r"\x27([^\x27\x5c]|\x5c.)*\x27"> => {
         // 'foo'
-        Expr::Literal(unquote(s))
+        Expr::Inlined(unquote(s).into_object())
     },
 }

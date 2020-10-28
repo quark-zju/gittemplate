@@ -1,3 +1,4 @@
+use crate::objects::protocol::IntoObject;
 use crate::objects::protocol::Object;
 use crate::Error;
 use crate::Result;
@@ -7,10 +8,7 @@ use std::fmt;
 /// A node in the parsed AST.
 #[derive(Clone)]
 pub enum Expr {
-    /// String literal. "x".
-    Literal(String),
-
-    /// Symbol name. v.
+    /// Unresolved symbol name.
     Symbol(Symbol),
 
     /// A function call.
@@ -61,7 +59,6 @@ impl Symbol {
 impl fmt::Debug for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Expr::Literal(s) => s.fmt(f)?,
             Expr::Symbol(s) => f.write_str(s.as_str())?,
             Expr::Fn(name, args) => {
                 let name = name.as_str();
@@ -77,10 +74,8 @@ impl fmt::Debug for Expr {
                 }
             }
             Expr::Inlined(value) => {
-                f.write_str("{")?;
-                let s = value.to_plain_string().unwrap_or_default();
+                let s = value.to_ast_fmt_string();
                 f.write_str(&s)?;
-                f.write_str("}")?;
             }
         }
         Ok(())
@@ -110,7 +105,7 @@ impl Expr {
     /// Useful to implement lambda.
     pub(crate) fn replace(&mut self, from: &str, to: &Expr) {
         match self {
-            Expr::Literal(_) | Expr::Inlined(_) => {}
+            Expr::Inlined(_) => {}
             Expr::Symbol(s) => {
                 if s.as_str() == from {
                     *self = to.clone();
@@ -138,7 +133,6 @@ impl Expr {
     pub(crate) fn into_gitrevset_expr(self) -> Result<gitrevset::Expr> {
         type RevsetExpr = gitrevset::Expr;
         let expr = match self {
-            Expr::Literal(s) => RevsetExpr::Name(s),
             Expr::Symbol(Symbol::Name(s)) => RevsetExpr::Name(s.to_string()),
             Expr::Fn(Symbol::Name(name), args) => {
                 let args = args
@@ -191,13 +185,13 @@ pub(crate) fn unquote(s: &str) -> String {
 
 impl From<String> for Expr {
     fn from(s: String) -> Expr {
-        Expr::Literal(s)
+        Expr::Inlined(s.into_object())
     }
 }
 
 impl From<&str> for Expr {
     fn from(s: &str) -> Expr {
-        Expr::Literal(s.to_string())
+        Expr::Inlined(s.to_string().into_object())
     }
 }
 
