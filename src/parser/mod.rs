@@ -22,7 +22,7 @@ fn parse_internal(s: &str, ignore_errors: bool) -> crate::Result<Expr> {
     let parser = grammar::TopExprParser::new();
     let result = parser.parse(ignore_errors, &s);
 
-    loop {
+    for _attempt in 0..10 {
         if result.is_ok() || !ignore_errors {
             break;
         }
@@ -62,6 +62,9 @@ fn eof_missing(
         if *location == s.len() {
             if expected.iter().find(|s| s.as_str() == "\")\"").is_some() {
                 return Some(")");
+            }
+            if expected.iter().find(|s| s.as_str() == "\"]\"").is_some() {
+                return Some("]");
             }
             return Some(MISSING);
         }

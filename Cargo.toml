@@ -24,8 +24,8 @@ thiserror = "1"
 
 [dev-dependencies]
 gitrevset = { version = "0.2", features = ["testutil"] }
-rustyline = "6"
 tempfile = "3"
+termwiz = "0.9"
 
 [features]
 default = []
