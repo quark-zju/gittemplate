@@ -21,49 +21,14 @@ pub enum Expr {
 }
 
 /// Symbol name.
-#[derive(Clone)]
-pub enum Symbol {
-    /// Specified name.
-    Name(Cow<'static, str>),
-
-    /// Placeholder.
-    /// Useful for parsing incomplete input.
-    Missing,
-}
-
-impl From<()> for Symbol {
-    fn from(_: ()) -> Self {
-        Self::Missing
-    }
-}
-
-impl From<&'static str> for Symbol {
-    fn from(s: &'static str) -> Self {
-        Self::Name(s.into())
-    }
-}
-
-impl From<String> for Symbol {
-    fn from(s: String) -> Self {
-        Self::Name(s.into())
-    }
-}
-
-impl Symbol {
-    pub fn as_str(&self) -> &str {
-        match self {
-            Symbol::Name(ref s) => s.as_ref(),
-            Symbol::Missing => &"<missing>",
-        }
-    }
-}
+pub type Symbol = Cow<'static, str>;
 
 impl fmt::Debug for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Expr::Symbol(s) => f.write_str(s.as_str())?,
+            Expr::Symbol(s) => f.write_str(s.as_ref())?,
             Expr::Fn(name, args) => {
-                let name = name.as_str();
+                let name = name.as_ref();
                 if args.is_empty() {
                     f.write_str(name)?;
                     f.write_str("()")?;
@@ -109,15 +74,15 @@ impl Expr {
         match self {
             Expr::Inlined(_) => {}
             Expr::Symbol(s) => {
-                if s.as_str() == from {
+                if s.as_ref() == from {
                     *self = to.clone();
                 }
             }
             Expr::Fn(name, args) => {
                 // Special case: hold the first argument of "lambda" unchanged.
-                if name.as_str() == "lambda" && args.len() > 1 {
+                if name.as_ref() == "lambda" && args.len() > 1 {
                     if let Expr::Symbol(ref inner_name) = args[0] {
-                        if inner_name.as_str() != from {
+                        if inner_name.as_ref() != from {
                             for arg in &mut args[1..] {
                                 arg.replace(from, to);
                             }
@@ -135,16 +100,15 @@ impl Expr {
     pub(crate) fn into_gitrevset_expr(self) -> Result<gitrevset::Expr> {
         type RevsetExpr = gitrevset::Expr;
         let expr = match self {
-            Expr::Symbol(Symbol::Name(s)) => RevsetExpr::Name(s.to_string()),
-            Expr::Fn(Symbol::Name(name), args) => {
+            Expr::Symbol(s) => RevsetExpr::Name(s.to_string()),
+            Expr::Fn(name, args) => {
                 let args = args
                     .into_iter()
                     .map(|a| a.into_gitrevset_expr())
                     .collect::<Result<Vec<_>>>()?;
                 RevsetExpr::Fn(name, args)
             }
-            // Untranslatable.
-            _ => RevsetExpr::Name("_unknown_".into()),
+            Expr::Inlined(s) => RevsetExpr::Name(s.to_plain_string()?.into()),
         };
         Ok(expr)
     }
@@ -221,18 +185,6 @@ impl serde::Serialize for Expr {
             }
             Expr::Symbol(symbol) => json!(["symbol", symbol]).serialize(serializer),
             Expr::Fn(fn_name, fn_args) => json!(["fn", fn_name, fn_args]).serialize(serializer),
-        }
-    }
-}
-
-impl serde::Serialize for Symbol {
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        match self {
-            Symbol::Missing => serializer.serialize_none(),
-            Symbol::Name(name) => serializer.serialize_str(&name),
         }
     }
 }

@@ -1,6 +1,5 @@
 use crate::ast::Expr;
 use crate::ast::ParseToExpr;
-use crate::ast::Symbol;
 use crate::objects::protocol::Attribute;
 use crate::objects::protocol::IntoObject;
 use crate::objects::protocol::Object;
@@ -14,6 +13,7 @@ use crate::objects::types::NilObject;
 use crate::objects::types::RegexObject;
 use crate::objects::types::RepoObject;
 use crate::objects::types::TimestampObject;
+use crate::parser::MISSING;
 use crate::Error;
 use crate::Result;
 use std::fmt;
@@ -85,10 +85,13 @@ impl EvalContext {
     pub(crate) fn eval_expr(&self, expr: &Expr) -> Result<Object> {
         let object = &self.global_object;
         let value: Object = match expr {
-            Expr::Symbol(Symbol::Name(name)) => match object.get_attr(&name)? {
+            Expr::Symbol(name) => match object.get_attr(&name)? {
                 Attribute::Missing => match self.resolve_global_symbol(name) {
                     Some(value) => value,
                     None => {
+                        if name == MISSING {
+                            return Err(missing_symbol_hint(object));
+                        }
                         return Err(Error::UnresolvedSymbol(name.to_string()));
                     }
                 },
@@ -97,13 +100,17 @@ impl EvalContext {
                     return Err(Error::UnresolvedSymbol(name.to_string()))
                 }
             },
-            Expr::Fn(Symbol::Name(name), args) => {
+            Expr::Fn(name, args) => {
                 match self.resolve_global_function(&name) {
                     None => {
                         // Try local attribute and method. Note: args[0] will be no longer lazy.
                         if let Some(this_expr) = args.get(0) {
                             let this = self.eval_expr(this_expr)?;
                             let typename = this.type_name();
+                            if name == MISSING {
+                                // Show attributes on `this`.
+                                return Err(missing_symbol_hint(&this));
+                            }
                             if let Some(value) = self.method_call(this, name, &args)? {
                                 return Ok(value);
                             }
@@ -118,19 +125,6 @@ impl EvalContext {
                 }
             }
             Expr::Inlined(value) => value.clone(),
-
-            // Missing symbols (auto complete).
-            Expr::Fn(Symbol::Missing, args) => {
-                // Show attributes on the current args[0].
-                if let Some(obj) = args.get(0).and_then(|e| self.eval_expr(e).ok()) {
-                    return Err(missing_symbol_hint(&obj));
-                }
-                return Err(Error::MissingingSymbol(Default::default()));
-            }
-            Expr::Symbol(Symbol::Missing) => {
-                // Show attributes from the global variable.
-                return Err(missing_symbol_hint(object));
-            }
         };
         Ok(value)
     }
@@ -141,13 +135,13 @@ impl EvalContext {
         match expr {
             Expr::Inlined(_) => {}
             Expr::Symbol(ref s) => {
-                if let Some(obj) = self.resolve_global_symbol(s.as_str()) {
+                if let Some(obj) = self.resolve_global_symbol(s.as_ref()) {
                     return Expr::Inlined(obj);
                 }
             }
             Expr::Fn(fn_name, args) => {
                 let args: Vec<Expr> = args.into_iter().map(|e| self.partial_eval(e)).collect();
-                match fn_name.as_str() {
+                match fn_name.as_ref() {
                     "re" => {
                         if let [Expr::Inlined(_)] = &args[..] {
                             // Pre-compile the regex.
@@ -338,7 +332,7 @@ fn concat(context: &EvalContext, args: &[Expr]) -> Result<Object> {
 fn lambda(context: &EvalContext, args: &[Expr]) -> Result<Object> {
     let _ = context;
     ensure_arg_count("lambda", args, 2..=2)?;
-    let arg_name = if let Expr::Symbol(Symbol::Name(arg_name)) = &args[0] {
+    let arg_name = if let Expr::Symbol(arg_name) = &args[0] {
         arg_name.clone()
     } else {
         return Err(Error::MismatchedType(
