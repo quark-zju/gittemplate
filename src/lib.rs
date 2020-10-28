@@ -56,8 +56,8 @@
 //! - `eq(x, y)`, or `x == y`: Test if `typename(x)` equals to
 //!   `typename(y)`, and `str(x)` equals to `str(y)` ([Bool](#bool)).
 //! - `not(x)`, or `!x`: `if(x, false, true)` ([Bool](#bool)).
-//! - `ast(expr:Expr)`: Get the internal AST of `expr` as a string. Useful
-//!   to debug operator precedence ([String](#string)).
+//! - `ast(expr:Expr)`: Get the internal AST of `expr`. Useful to debug
+//!   operator precedence ([Expr](#expr)).
 //!
 //! ### Constructors
 //!
@@ -156,10 +156,6 @@
 //!   - `r.gsub(s:String, to:String|Lambda)`: Similar to `r.sub` but
 //!     replaces all matches instead of just the first ([String](#string)).
 //!
-//! ### Json
-//!   - `j.pretty(enabled:Bool=true)`: Enable or disable pretty print
-//!     ([Json](#json)).
-//!
 //! ### Repo
 //!   - `r.revs(spec:String|Expr)`:
 //!     [Revset query](https://docs.rs/gitrevset/0.2.0/gitrevset/#language-specification).
@@ -220,6 +216,13 @@
 //! ### PosixPath
 //!   - `p.basename`: The file name of the path ([PosixPath](#posixpath)).
 //!   - `p.dirname`: The directory name of the path ([PosixPath](#posixpath)).
+//!
+//! ### Json
+//!   - `j.pretty(enabled:Bool=true)`: Enable or disable pretty print
+//!     ([Json](#json)).
+//!
+//! ### Expr
+//!   - No special methods. `.json` can be used to dump structured AST.
 //!
 //! ## Automatic type conversion
 //!

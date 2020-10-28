@@ -2,6 +2,8 @@ use crate::objects::protocol::IntoObject;
 use crate::objects::protocol::Object;
 use crate::Error;
 use crate::Result;
+use serde::ser::Error as _;
+use serde_json::json;
 use std::borrow::Cow;
 use std::fmt;
 
@@ -204,6 +206,34 @@ impl From<Object> for Expr {
 impl From<i64> for Expr {
     fn from(i: i64) -> Expr {
         Expr::Inlined(i.into_object())
+    }
+}
+
+impl serde::Serialize for Expr {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            Expr::Inlined(object) => {
+                let serde_value = object.to_serde_value().map_err(|e| S::Error::custom(e))?;
+                json!(["inlined", serde_value]).serialize(serializer)
+            }
+            Expr::Symbol(symbol) => json!(["symbol", symbol]).serialize(serializer),
+            Expr::Fn(fn_name, fn_args) => json!(["fn", fn_name, fn_args]).serialize(serializer),
+        }
+    }
+}
+
+impl serde::Serialize for Symbol {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            Symbol::Missing => serializer.serialize_none(),
+            Symbol::Name(name) => serializer.serialize_str(&name),
+        }
     }
 }
 

@@ -6,6 +6,7 @@ use crate::objects::protocol::IntoObject;
 use crate::objects::protocol::Object;
 use crate::objects::protocol::ObjectProtocol;
 use crate::objects::types::BoolObject;
+use crate::objects::types::ExprObject;
 use crate::objects::types::JsonObject;
 use crate::objects::types::LambdaObject;
 use crate::objects::types::ListObject;
@@ -409,7 +410,7 @@ fn r#try(context: &EvalContext, args: &[Expr]) -> Result<Object> {
 /// Obtains the AST string.
 fn ast(_context: &EvalContext, args: &[Expr]) -> Result<Object> {
     ensure_arg_count("ast", args, 1..=1)?;
-    Ok(args[0].to_string().into_object())
+    Ok(ExprObject::from(args[0].clone()).to_object())
 }
 
 /// Obtains the type name.

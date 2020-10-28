@@ -1,5 +1,6 @@
 mod bool;
 mod commit;
+mod expr;
 mod graph;
 mod int;
 mod json;
@@ -18,6 +19,7 @@ pub(crate) use super::protocol;
 
 pub(crate) use self::bool::BoolObject;
 pub(crate) use commit::CommitObject;
+pub(crate) use expr::ExprObject;
 pub(crate) use graph::GraphObject;
 pub(crate) use int::IntegerObject;
 pub(crate) use json::JsonObject;
