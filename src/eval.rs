@@ -1,5 +1,6 @@
 use crate::ast::Expr;
 use crate::ast::ParseToExpr;
+use crate::ast::Symbol;
 use crate::objects::protocol::Attribute;
 use crate::objects::protocol::IntoObject;
 use crate::objects::protocol::Object;
@@ -84,7 +85,7 @@ impl EvalContext {
         let object = &self.global_object;
         let value: Object = match expr {
             Expr::Literal(s) => s.clone().into_object(),
-            Expr::Symbol(name) => match object.get_attr(&name)? {
+            Expr::Symbol(Symbol::Name(name)) => match object.get_attr(&name)? {
                 Attribute::Missing => match self.resolve_global_symbol(name) {
                     Some(value) => value,
                     None => {
@@ -96,7 +97,7 @@ impl EvalContext {
                     return Err(Error::UnresolvedSymbol(name.to_string()))
                 }
             },
-            Expr::Fn(name, args) => {
+            Expr::Fn(Symbol::Name(name), args) => {
                 match self.resolve_global_function(&name) {
                     None => {
                         // Try local attribute and method. Note: args[0] will be no longer lazy.
@@ -117,6 +118,10 @@ impl EvalContext {
                 }
             }
             Expr::Inlined(value) => value.clone(),
+            _ => {
+                // TODO: Missing
+                NilObject.to_object()
+            }
         };
         Ok(value)
     }
@@ -128,13 +133,13 @@ impl EvalContext {
             Expr::Literal(s) => return Expr::Inlined(s.into_object()),
             Expr::Inlined(_) => {}
             Expr::Symbol(ref s) => {
-                if let Some(obj) = self.resolve_global_symbol(s) {
+                if let Some(obj) = self.resolve_global_symbol(s.as_str()) {
                     return Expr::Inlined(obj);
                 }
             }
             Expr::Fn(fn_name, args) => {
                 let args: Vec<Expr> = args.into_iter().map(|e| self.partial_eval(e)).collect();
-                match fn_name.as_ref() {
+                match fn_name.as_str() {
                     "re" => {
                         if let [Expr::Inlined(_)] = &args[..] {
                             // Pre-compile the regex.
@@ -325,7 +330,7 @@ fn concat(context: &EvalContext, args: &[Expr]) -> Result<Object> {
 fn lambda(context: &EvalContext, args: &[Expr]) -> Result<Object> {
     let _ = context;
     ensure_arg_count("lambda", args, 2..=2)?;
-    let arg_name = if let Expr::Symbol(arg_name) = &args[0] {
+    let arg_name = if let Expr::Symbol(Symbol::Name(arg_name)) = &args[0] {
         arg_name.clone()
     } else {
         return Err(Error::MismatchedType(

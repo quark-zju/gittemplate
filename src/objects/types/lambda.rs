@@ -4,18 +4,24 @@ use crate::ast::Expr;
 use crate::eval;
 use crate::impl_object;
 use crate::Result;
+use std::borrow::Cow;
 use std::fmt;
 use std::fmt::Display;
 
 #[derive(Clone)]
 pub struct LambdaObject {
     pub context: eval::EvalContext,
-    pub arg_name: String,
+    pub arg_name: Cow<'static, str>,
     pub body: Expr,
 }
 
 impl LambdaObject {
-    pub fn new(context: eval::EvalContext, arg_name: String, body: Expr) -> Self {
+    pub fn new(
+        context: eval::EvalContext,
+        arg_name: impl Into<Cow<'static, str>>,
+        body: Expr,
+    ) -> Self {
+        let arg_name = arg_name.into();
         Self {
             context,
             arg_name,

@@ -11,21 +11,60 @@ pub enum Expr {
     Literal(String),
 
     /// Symbol name. v.
-    Symbol(String),
+    Symbol(Symbol),
 
     /// A function call.
-    Fn(Cow<'static, str>, Vec<Expr>),
+    Fn(Symbol, Vec<Expr>),
 
     /// Pre-calculated value.
     Inlined(Object),
+}
+
+/// Symbol name.
+#[derive(Clone)]
+pub enum Symbol {
+    /// Specified name.
+    Name(Cow<'static, str>),
+
+    /// Placeholder.
+    /// Useful for parsing incomplete input.
+    Missing,
+}
+
+impl From<()> for Symbol {
+    fn from(_: ()) -> Self {
+        Self::Missing
+    }
+}
+
+impl From<&'static str> for Symbol {
+    fn from(s: &'static str) -> Self {
+        Self::Name(s.into())
+    }
+}
+
+impl From<String> for Symbol {
+    fn from(s: String) -> Self {
+        Self::Name(s.into())
+    }
+}
+
+impl Symbol {
+    pub fn as_str(&self) -> &str {
+        match self {
+            Symbol::Name(ref s) => s.as_ref(),
+            Symbol::Missing => &"<missing>",
+        }
+    }
 }
 
 impl fmt::Debug for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Expr::Literal(s) => s.fmt(f)?,
-            Expr::Symbol(s) => f.write_str(&s)?,
+            Expr::Symbol(s) => f.write_str(s.as_str())?,
             Expr::Fn(name, args) => {
+                let name = name.as_str();
                 if args.is_empty() {
                     f.write_str(name)?;
                     f.write_str("()")?;
@@ -66,15 +105,15 @@ impl Expr {
         match self {
             Expr::Literal(_) | Expr::Inlined(_) => {}
             Expr::Symbol(s) => {
-                if s == from {
+                if s.as_str() == from {
                     *self = to.clone();
                 }
             }
             Expr::Fn(name, args) => {
                 // Special case: hold the first argument of "lambda" unchanged.
-                if name == "lambda" && args.len() > 1 {
+                if name.as_str() == "lambda" && args.len() > 1 {
                     if let Expr::Symbol(ref inner_name) = args[0] {
-                        if inner_name != from {
+                        if inner_name.as_str() != from {
                             for arg in &mut args[1..] {
                                 arg.replace(from, to);
                             }
@@ -93,15 +132,16 @@ impl Expr {
         type RevsetExpr = gitrevset::Expr;
         let expr = match self {
             Expr::Literal(s) => RevsetExpr::Name(s),
-            Expr::Symbol(s) => RevsetExpr::Name(s),
-            Expr::Fn(name, args) => {
+            Expr::Symbol(Symbol::Name(s)) => RevsetExpr::Name(s.to_string()),
+            Expr::Fn(Symbol::Name(name), args) => {
                 let args = args
                     .into_iter()
                     .map(|a| a.into_gitrevset_expr())
                     .collect::<Result<Vec<_>>>()?;
-                RevsetExpr::Fn(name.clone(), args)
+                RevsetExpr::Fn(name, args)
             }
-            Expr::Inlined(obj) => RevsetExpr::Name(obj.to_plain_string()?),
+            // Untranslatable.
+            _ => RevsetExpr::Name("_unknown_".into()),
         };
         Ok(expr)
     }
@@ -162,7 +202,7 @@ impl From<Object> for Expr {
 
 impl From<u64> for Expr {
     fn from(i: u64) -> Expr {
-        Expr::Symbol(i.to_string())
+        Expr::Symbol(i.to_string().into())
     }
 }
 

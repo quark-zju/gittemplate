@@ -2,15 +2,15 @@ use crate::ast;
 use crate::ast::Expr;
 use crate::ast::unquote;
 
-grammar;
+grammar(ignore_errors: bool);
 
-pub Expr = Expr200;
+pub TopExpr = Expr200;
 
 Expr200: Expr = {
     Expr150 => <>,
     <name:Symbol> "=>" <body:Expr150> => {
         // x => body: desugar to lambda(x, body)
-        Expr::Fn("lambda".into(), vec![Expr::Symbol(name), body])
+        Expr::Fn("lambda".into(), vec![name, body])
     },
 }
 
@@ -118,16 +118,16 @@ Expr010: Expr = {
 }
 
 Expr000: Expr = {
-    Symbol => Expr::Symbol(<>),
+    Symbol => <>,
     Regex => <>,
     Literal => <>,
-    <func_name:Symbol> "(" <args:(Expr200 ",")*> <last:Expr200?> ")" => {
+    <func_name:SymbolName> "(" <args:(Expr200 ",")*> <last:Expr200?> ")" => {
         // Function call.
         let mut arg_list: Vec<Expr> = args.into_iter().map(|(e, _)| e).collect();
         if let Some(last_arg) = last { arg_list.push(last_arg); }
-        Expr::Fn(func_name.into(), arg_list)
+        Expr::Fn(func_name, arg_list)
     },
-    <this:Expr000> "." <method_name:Symbol> "(" <args:(Expr200 ",")*> <last:Expr200?> ")" => {
+    <this:Expr000> "." <method_name:SymbolName> "(" <args:(Expr200 ",")*> <last:Expr200?> ")" => {
         // x.foo(a, b, c): desugar to foo(x, a, b, c)
         let mut arg_list: Vec<Expr> = Vec::with_capacity(args.len() + 2);
         arg_list.push(this);
@@ -135,11 +135,11 @@ Expr000: Expr = {
             arg_list.push(arg);
         }
         if let Some(last_arg) = last { arg_list.push(last_arg); }
-        Expr::Fn(method_name.into(), arg_list)
+        Expr::Fn(method_name, arg_list)
     },
-    <arg:Expr000> "." <attr_name:Symbol> => {
+    <arg:Expr000> "." <attr_name:SymbolName> => {
         // x.foo: desugar to foo(x)
-        Expr::Fn(attr_name.into(), vec![arg])
+        Expr::Fn(attr_name, vec![arg])
     },
     <x:Expr000> "?" => {
         // x?: desugar to try(x)
@@ -161,8 +161,19 @@ Regex: Expr = {
     }
 }
 
-Symbol: String = {
-    r"[a-zA-Z0-9_$@]+" => <>.to_string(),
+Symbol: Expr = {
+    SymbolName => Expr::Symbol(<>),
+}
+
+SymbolName: ast::Symbol = {
+    r"[a-zA-Z0-9_$@]+" => ast::Symbol::Name(<>.to_string().into()),
+    ! =>? {
+        if ignore_errors {
+            Ok(ast::Symbol::Missing)
+        } else {
+            Err(<>.error)
+        }
+    },
 }
 
 Literal: Expr = {
