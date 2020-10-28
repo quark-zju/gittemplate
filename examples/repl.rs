@@ -38,8 +38,10 @@ fn main() {
             let code = rl.readline("> ");
             match code {
                 Ok(line) => {
-                    rl.add_history_entry(line.as_str());
-                    eval_single(&context, &line, &mut out);
+                    if !line.is_empty() {
+                        rl.add_history_entry(line.as_str());
+                        eval_single(&context, &line, &mut out);
+                    }
                 }
                 Err(ReadlineError::Interrupted) | Err(ReadlineError::Eof) => break,
                 Err(err) => {
