@@ -3,8 +3,11 @@ use gittemplate::EvalContext;
 use gittemplate::Expr;
 use gittemplate::Result;
 use std::env;
+use std::fs;
 use std::io;
 use std::io::Write;
+use std::path::Path;
+use std::path::PathBuf;
 
 use termwiz::cell::AttributeChange;
 use termwiz::color::AnsiColor;
@@ -46,7 +49,8 @@ fn main() {
         // REPL
         let mut terminal = line_editor_terminal().unwrap();
         let mut editor = LineEditor::new(&mut terminal);
-        let mut host = Host::new(context.clone());
+        let history_path = Path::new("repl-history.txt");
+        let mut host = Host::new(context.clone(), history_path);
         loop {
             if let Ok(Some(line)) = editor.read_line(&mut host) {
                 if &line == "exit" {
@@ -57,6 +61,7 @@ fn main() {
                     let _ = out.write_all(b"\n");
                     let _ = out.flush();
                 }
+                host.add_history(&line);
             } else {
                 break;
             }
@@ -71,14 +76,49 @@ fn main() {
 struct Host {
     history: BasicHistory,
     context: EvalContext,
+    pending_history: Vec<String>,
+    history_path: PathBuf,
 }
 
 impl Host {
-    fn new(context: EvalContext) -> Self {
-        Self {
+    fn new(context: EvalContext, history_path: &Path) -> Self {
+        let mut host = Self {
             context,
             history: Default::default(),
+            pending_history: Default::default(),
+            history_path: history_path.to_path_buf(),
+        };
+        host.import_history();
+        host
+    }
+
+    fn import_history(&mut self) {
+        if let Ok(s) = fs::read_to_string(&self.history_path) {
+            for line in s.lines() {
+                self.history.add(line);
+            }
         }
+    }
+
+    fn add_history(&mut self, line: &str) {
+        self.history.add(line);
+        self.pending_history.push(line.to_string());
+    }
+
+    fn flush_history(&mut self) {
+        if let Ok(mut f) = fs::OpenOptions::new().append(true).open(&self.history_path) {
+            for line in &self.pending_history {
+                let _ = f.write_all(line.as_bytes());
+                let _ = f.write_all(b"\n");
+            }
+            self.pending_history.clear();
+        }
+    }
+}
+
+impl Drop for Host {
+    fn drop(&mut self) {
+        self.flush_history()
     }
 }
 
