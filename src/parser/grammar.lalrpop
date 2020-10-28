@@ -2,6 +2,7 @@ use crate::ast;
 use crate::ast::Expr;
 use crate::ast::unquote;
 use crate::objects::protocol::IntoObject;
+use super::desugar_concat;
 
 grammar(ignore_errors: bool);
 
@@ -11,43 +12,28 @@ Expr200: Expr = {
     Expr150 => <>,
     <name:Symbol> "=>" <body:Expr150> => {
         // x => body: desugar to lambda(x, body)
-        Expr::Fn("lambda".into(), vec![name, body])
+        ast!(lambda({name}, {body}))
     },
 }
 
 Expr150: Expr = {
     <x:Expr115> <xs:(".." Expr115)*> => {
-        if xs.is_empty() {
-            x
-        } else {
-            // x .. y .. z: desugar to concat(x, y, z)
-            let args: Vec<Expr> = std::iter::once(x).chain(xs.into_iter().map(|(_, e)| e)).collect();
-            Expr::Fn("concat".into(), args)
-        }
+        // x .. y .. z: desugar to concat(x, y, z)
+        desugar_concat(x, xs, "concat")
     },
 }
 
 Expr115: Expr = {
     <x:Expr110> <xs:("||" Expr110)*> => {
-        if xs.is_empty() {
-            x
-        } else {
-            // x || y || z: desugar to or(x, y, z)
-            let args: Vec<Expr> = std::iter::once(x).chain(xs.into_iter().map(|(_, e)| e)).collect();
-            Expr::Fn("or".into(), args)
-        }
+        // x || y || z: desugar to or(x, y, z)
+        desugar_concat(x, xs, "or")
     },
 }
 
 Expr110: Expr = {
     <x:Expr105> <xs:("&&" Expr105)*> => {
-        if xs.is_empty() {
-            x
-        } else {
-            // x && y && z: desugar to and(x, y, z)
-            let args: Vec<Expr> = std::iter::once(x).chain(xs.into_iter().map(|(_, e)| e)).collect();
-            Expr::Fn("and".into(), args)
-        }
+        // x && y && z: desugar to and(x, y, z)
+        desugar_concat(x, xs, "and")
     },
 }
 

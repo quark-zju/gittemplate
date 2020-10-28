@@ -19,3 +19,15 @@ pub fn parse_incomplete(s: &str) -> Result<Expr, ParseError<usize, Token, &str>>
 fn parse_internal(s: &str, ignore_errors: bool) -> Result<Expr, ParseError<usize, Token, &str>> {
     grammar::TopExprParser::new().parse(ignore_errors, s)
 }
+
+pub(crate) fn desugar_concat(x: Expr, xs: Vec<(&str, Expr)>, func_name: &str) -> Expr {
+    if xs.is_empty() {
+        x
+    } else {
+        // x SEP y SEP z: desugar to func_name(x, y, z)
+        let args: Vec<Expr> = std::iter::once(x)
+            .chain(xs.into_iter().map(|(_, e)| e))
+            .collect();
+        Expr::Fn(func_name.to_string().into(), args)
+    }
+}

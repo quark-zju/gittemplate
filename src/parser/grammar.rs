@@ -1,9 +1,10 @@
 // auto-generated: "lalrpop 0.19.1"
-// sha256: 97523945b01cf9ac63f87851d2e294e66e7c13ca2a0c798cd272ee20f02b79
+// sha256: 4ca47c8938bcfff3eabf7ae45b4a7e59702796ebbb9a7ab54616583b8c268e
 use crate::ast;
 use crate::ast::Expr;
 use crate::ast::unquote;
 use crate::objects::protocol::IntoObject;
+use super::desugar_concat;
 #[allow(unused_extern_crates)]
 extern crate lalrpop_util as __lalrpop_util;
 #[allow(unused_imports)]
@@ -17,6 +18,7 @@ mod __parse__TopExpr {
     use crate::ast::Expr;
     use crate::ast::unquote;
     use crate::objects::protocol::IntoObject;
+    use super::super::desugar_concat;
     #[allow(unused_extern_crates)]
     extern crate lalrpop_util as __lalrpop_util;
     #[allow(unused_imports)]
@@ -3006,6 +3008,7 @@ mod __intern_token {
     use crate::ast::Expr;
     use crate::ast::unquote;
     use crate::objects::protocol::IntoObject;
+    use super::desugar_concat;
     #[allow(unused_extern_crates)]
     extern crate lalrpop_util as __lalrpop_util;
     #[allow(unused_imports)]
@@ -3091,7 +3094,7 @@ fn __action3<
 {
     {
         // x => body: desugar to lambda(x, body)
-        Expr::Fn("lambda".into(), vec![name, body])
+        ast!(lambda({name}, {body}))
     }
 }
 
@@ -3106,13 +3109,8 @@ fn __action4<
 ) -> Expr
 {
     {
-        if xs.is_empty() {
-            x
-        } else {
-            // x .. y .. z: desugar to concat(x, y, z)
-            let args: Vec<Expr> = std::iter::once(x).chain(xs.into_iter().map(|(_, e)| e)).collect();
-            Expr::Fn("concat".into(), args)
-        }
+        // x .. y .. z: desugar to concat(x, y, z)
+        desugar_concat(x, xs, "concat")
     }
 }
 
@@ -3127,13 +3125,8 @@ fn __action5<
 ) -> Expr
 {
     {
-        if xs.is_empty() {
-            x
-        } else {
-            // x || y || z: desugar to or(x, y, z)
-            let args: Vec<Expr> = std::iter::once(x).chain(xs.into_iter().map(|(_, e)| e)).collect();
-            Expr::Fn("or".into(), args)
-        }
+        // x || y || z: desugar to or(x, y, z)
+        desugar_concat(x, xs, "or")
     }
 }
 
@@ -3148,13 +3141,8 @@ fn __action6<
 ) -> Expr
 {
     {
-        if xs.is_empty() {
-            x
-        } else {
-            // x && y && z: desugar to and(x, y, z)
-            let args: Vec<Expr> = std::iter::once(x).chain(xs.into_iter().map(|(_, e)| e)).collect();
-            Expr::Fn("and".into(), args)
-        }
+        // x && y && z: desugar to and(x, y, z)
+        desugar_concat(x, xs, "and")
     }
 }
 
