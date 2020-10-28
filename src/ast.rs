@@ -201,9 +201,9 @@ impl From<Object> for Expr {
     }
 }
 
-impl From<u64> for Expr {
-    fn from(i: u64) -> Expr {
-        Expr::Symbol(i.to_string().into())
+impl From<i64> for Expr {
+    fn from(i: i64) -> Expr {
+        Expr::Inlined(i.into_object())
     }
 }
 

@@ -62,5 +62,14 @@ impl_object! {
         fn to_serde_value(&self) -> Result<SerdeValue> {
             Ok(self.to_i64().into())
         }
+
+        fn to_ast_fmt_string(&self) -> String {
+            let i = self.to_i64();
+            if i < 0 {
+                format!("neg({})", -i)
+            } else {
+                format!("{}", i)
+            }
+        }
     }
 }

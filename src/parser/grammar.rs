@@ -1,5 +1,5 @@
 // auto-generated: "lalrpop 0.19.1"
-// sha256: 41dde6ee5be785c8ec0dae850c7849fee9ebb030a4f34d80aa8aa4593
+// sha256: 97523945b01cf9ac63f87851d2e294e66e7c13ca2a0c798cd272ee20f02b79
 use crate::ast;
 use crate::ast::Expr;
 use crate::ast::unquote;
@@ -3540,7 +3540,20 @@ fn __action30<
     (_, __0, _): (usize, ast::Symbol, usize),
 ) -> Expr
 {
-    Expr::Symbol(__0)
+    {
+        let s = __0;
+        match &s {
+            ast::Symbol::Name(name) => {
+                // Try to parse as an integer directly.
+                if let Ok(i) = name.parse::<i64>() {
+                    Expr::Inlined(i.into_object())
+                } else {
+                    Expr::Symbol(s)
+                }
+            },
+            ast::Symbol::Missing => Expr::Symbol(s),
+        }
+    }
 }
 
 #[allow(unused_variables)]

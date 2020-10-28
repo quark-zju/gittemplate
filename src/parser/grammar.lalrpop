@@ -163,7 +163,20 @@ Regex: Expr = {
 }
 
 Symbol: Expr = {
-    SymbolName => Expr::Symbol(<>),
+    SymbolName => {
+        let s = <>;
+        match &s {
+            ast::Symbol::Name(name) => {
+                // Try to parse as an integer directly.
+                if let Ok(i) = name.parse::<i64>() {
+                    Expr::Inlined(i.into_object())
+                } else {
+                    Expr::Symbol(s)
+                }
+            },
+            ast::Symbol::Missing => Expr::Symbol(s),
+        }
+    },
 }
 
 SymbolName: ast::Symbol = {
