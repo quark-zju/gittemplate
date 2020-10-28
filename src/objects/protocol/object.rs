@@ -15,12 +15,15 @@ pub trait ObjectProtocol: fmt::Fmt {
     }
 
     /// List attributes.
-    fn list_attrs() -> &'static [&'static str]
+    fn static_list_attrs() -> &'static [&'static str]
     where
         Self: Sized,
     {
         &[]
     }
+
+    /// List attributes.
+    fn list_attrs(&self) -> &'static [&'static str];
 
     /// Auto converting to another type based on accessed attribute name.
     fn deref_object(&self, name: &str) -> Result<Option<Object>> {
@@ -80,6 +83,10 @@ impl ObjectProtocol for Object {
         self.0.deref().get_attr(name)
     }
 
+    fn list_attrs(&self) -> &'static [&'static str] {
+        self.0.deref().list_attrs()
+    }
+
     fn deref_object(&self, name: &str) -> Result<Option<Object>> {
         self.0.deref().deref_object(name)
     }
@@ -114,6 +121,10 @@ impl ObjectProtocol for Object {
 }
 
 impl Object {
+    // fn list_self_attrs(&self) -> &'static [&'static str] {
+    //     self.0.deref()
+    // }
+
     /// Write to `w`. Unlike `to_plain_string()`, this function does not
     /// buffer. Unlike `fmt::Display`, this function reports errors.
     pub fn write_to(&self, mut w: impl std::io::Write) -> Result<()> {

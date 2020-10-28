@@ -8,7 +8,7 @@ where
     O: 'static,
     O: ObjectProtocol,
 {
-    if StringObject::list_attrs().contains(&name) {
+    if StringObject::static_list_attrs().contains(&name) {
         // Deref to String.
         let obj = StringObject::from(obj.to_plain_string()?).to_object();
         Ok(Some(obj))

@@ -158,7 +158,7 @@ impl_object! {
         }
 
         fn deref_object(&self, name: &str) -> Result<Option<Object>> {
-            if CommitObject::list_attrs().contains(&name) {
+            if CommitObject::static_list_attrs().contains(&name) {
                 Ok(Some(self.commit.clone().to_object()))
             } else {
                 auto_deref::default_deref_object(self, name)

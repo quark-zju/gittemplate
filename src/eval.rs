@@ -118,9 +118,18 @@ impl EvalContext {
                 }
             }
             Expr::Inlined(value) => value.clone(),
-            _ => {
-                // TODO: Missing
-                NilObject.to_object()
+
+            // Missing symbols (auto complete).
+            Expr::Fn(Symbol::Missing, args) => {
+                // Show attributes on the current args[0].
+                if let Some(obj) = args.get(0).and_then(|e| self.eval_expr(e).ok()) {
+                    return Err(missing_symbol_hint(&obj));
+                }
+                return Err(Error::MissingingSymbol(Default::default()));
+            }
+            Expr::Symbol(Symbol::Missing) => {
+                // Show attributes from the global variable.
+                return Err(missing_symbol_hint(object));
             }
         };
         Ok(value)
@@ -436,4 +445,11 @@ pub(crate) fn ensure_arg_count(
     } else {
         Ok(())
     }
+}
+
+/// Return MissingSymbol error with hints on attributes of the object.
+fn missing_symbol_hint(obj: &Object) -> Error {
+    let attrs = obj.list_attrs();
+    let attrs = attrs.iter().map(|s| s.to_string()).collect();
+    return Error::MissingingSymbol(attrs);
 }

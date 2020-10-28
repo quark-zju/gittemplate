@@ -88,7 +88,7 @@ impl_object! {
 
         fn deref_object(&self, name: &str) -> Result<Option<Object>> {
             // Do not deref to string.
-            if ListObject::list_attrs().contains(&name) {
+            if ListObject::static_list_attrs().contains(&name) {
                 Ok(Some(self.commits()?.to_object()))
             } else {
                 Ok(None)

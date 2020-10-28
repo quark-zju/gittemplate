@@ -51,6 +51,10 @@ pub enum Error {
     /// Incompatible types.
     #[error("incompatible types: {0}")]
     IncompatibleTypes(String),
+
+    /// Missing symbol.
+    #[error("missing symbol, hints: {0:?}")]
+    MissingingSymbol(Vec<String>),
 }
 
 impl From<gitrevset::dag::Error> for Error {

@@ -13,7 +13,7 @@ pub fn parse(s: &str) -> Result<Expr, ParseError<usize, Token, &str>> {
 /// Parse a string that might be incomplete (ex. "a+", "a.").
 /// `Expr::Symbol::Missing` will be used as placeholders for missing symbols.
 pub fn parse_incomplete(s: &str) -> Result<Expr, ParseError<usize, Token, &str>> {
-    parse_internal(s, false)
+    parse_internal(s, true)
 }
 
 fn parse_internal(s: &str, ignore_errors: bool) -> Result<Expr, ParseError<usize, Token, &str>> {

@@ -8,7 +8,7 @@ use std::io;
 
 fn eval_single(context: &EvalContext, code: &str, out: &mut dyn io::Write) -> bool {
     let result: Result<()> = (|| {
-        let ast = Expr::parse(code)?;
+        let ast = Expr::parse_incomplete(code)?;
         let value = context.eval(ast)?;
         value.write_to(out)?;
         Ok(())

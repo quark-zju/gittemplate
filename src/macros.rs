@@ -89,8 +89,11 @@ macro_rules! _impl_object_state {
                     _ => Ok(Attribute::Missing)
                 }
             }
-            fn list_attrs() -> &'static [&'static str] {
+            fn static_list_attrs() -> &'static [&'static str] {
                 &[$( $attr_str, )*]
+            }
+            fn list_attrs(&self) -> &'static [&'static str] {
+                Self::static_list_attrs()
             }
             fn as_any(&self) -> Option<&dyn std::any::Any> {
                 Some(self as &dyn std::any::Any)

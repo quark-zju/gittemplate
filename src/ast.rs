@@ -99,6 +99,13 @@ impl Expr {
         crate::parser::parse(s).map_err(|e| Error::ParseError(s.to_string(), e.to_string()))
     }
 
+    /// Parse AST from a potentially incomplete string.
+    /// Evaluating the AST might cause `MissingSymbol` errors.
+    pub fn parse_incomplete(s: &str) -> Result<Self> {
+        crate::parser::parse_incomplete(s)
+            .map_err(|e| Error::ParseError(s.to_string(), e.to_string()))
+    }
+
     /// Replace a name (ex. `x`) to another name.
     /// Useful to implement lambda.
     pub(crate) fn replace(&mut self, from: &str, to: &Expr) {
