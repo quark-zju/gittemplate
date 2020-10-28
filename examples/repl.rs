@@ -7,8 +7,12 @@ use std::env;
 use std::io;
 
 fn eval_single(context: &EvalContext, code: &str, out: &mut dyn io::Write) -> bool {
+    let debug = std::env::var("DEBUG").is_ok();
     let result: Result<()> = (|| {
         let ast = Expr::parse_incomplete(code)?;
+        if debug {
+            eprintln!("# AST: {:?}", &ast);
+        }
         let value = context.eval(ast)?;
         value.write_to(out)?;
         Ok(())
