@@ -37,7 +37,13 @@ def main():
         state_appends={"name": "$name", "impl_meta": "$($impl_meta)*"},
         comment="Main impl block.",
     )
-    for name in ["is_true", "deref_object", "is_eq", "to_serde_value", "to_ast_fmt_string"]:
+    for name in [
+        "is_true",
+        "deref_object",
+        "is_eq",
+        "to_serde_value",
+        "to_ast_fmt_string",
+    ]:
         state_replaces = {}
         if name == "deref_object":
             state_replaces["impl_deref_object"] = ""
